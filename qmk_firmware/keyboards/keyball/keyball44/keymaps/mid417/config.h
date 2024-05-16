@@ -46,4 +46,4 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #define RGBLIGHT_DEFAULT_SAT 0          // 〃
 #define RGBLIGHT_DEFAULT_VAL 70         // 〃
 
-#define TAPPING_TERM 130
+#define TAPPING_TERM 145
