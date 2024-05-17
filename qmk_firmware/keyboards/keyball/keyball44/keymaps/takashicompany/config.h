@@ -20,7 +20,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 #pragma once
 
-#ifdef RGBLIGHT_ENABLE
+#ifdef RGBLIGHT_ENABLE 
 #    define RGBLIGHT_EFFECT_BREATHING
 #    define RGBLIGHT_EFFECT_RAINBOW_MOOD
 #    define RGBLIGHT_EFFECT_RAINBOW_SWIRL
@@ -35,4 +35,5 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 #define TAP_CODE_DELAY 5
 #define DYNAMIC_KEYMAP_LAYER_COUNT 7
-#define TAPPING_TERM 140
+#define TAPPING_TERM 200
+#define IGNORE_MOD_TAP_INTERRUPT
