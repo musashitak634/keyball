@@ -373,6 +373,56 @@ void oledkit_render_info_user(void) {
 }
 #endif
 
+#ifdef OLED_ENABLE
+#include "lib/oledkit/oledkit.h"
+void oledkit_render_logo_user(void) {
+    // Require `OLED_FONT_H "keyboards/keyball/lib/logofont/logofont.c"`
+    char ch = 0x80;
+    // マウスレイヤーの場合、文字色の白黒を反転させる
+    bool isClicklayer = (get_highest_layer(layer_state) == click_layer);
+
+    for (int y = 0; y < 3; y++) {
+        oled_write_P(PSTR(" "), isClicklayer);
+        for (int x = 0; x < 16; x++) {
+            oled_write_char(ch++, isClicklayer);
+        }
+        oled_write_P(PSTR(" "), isClicklayer);
+        oled_advance_page(isClicklayer);
+    }
+}
+
+void oledkit_render_info_user(void)
+{
+    keyball_oled_render_keyinfo();
+    keyball_oled_render_ballinfo();
+//    keyball_oled_render_layerinfo();
+
+    // マウスレイヤーの場合、文字色の白黒を反転させる
+    bool isClicklayer = (get_highest_layer(layer_state) == click_layer);
+    oled_write_P(PSTR("L\xB6\xB7r\xB1 "), isClicklayer);
+    // oled_write(get_u8_str(get_highest_layer(layer_state), ' '), isClicklayer);
+    // oled_write_P(PSTR("            "), isClicklayer);
+
+    int layer = get_highest_layer(layer_state);
+    for (int i = 0; i < DYNAMIC_KEYMAP_LAYER_COUNT; i++) {
+        if (i == click_layer && isClicklayer) {
+            oled_write(get_u8_str(i, ' '), true);
+        } else {
+            if (i == layer) {
+                oled_write(get_u8_str(i, ' '), !isClicklayer);
+            } else {
+                oled_write(get_u8_str(i, ' '), isClicklayer);
+            }
+        }
+    }
+}
+
+oled_rotation_t oled_init_user(oled_rotation_t rotation) {
+    return is_keyboard_left() ? OLED_ROTATION_180 : rotation;
+}
+#endif
+
+
 const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
 
     LAYOUT_universal(
