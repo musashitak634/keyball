@@ -33,7 +33,6 @@ enum custom_keycodes {
     KC_SCROLL_DIR_H,
 };
 
-
 enum click_state {
     NONE = 0,
     WAITING,    // マウスレイヤーが有効になるのを待つ。 Wait for mouse layer to activate.
@@ -111,15 +110,6 @@ int16_t my_abs(int16_t num) {
     }
 
     return num;
-}
-
-// 自前の符号を返す関数。 Function to return the sign.
-int16_t mmouse_move_y_sign(int16_t num) {
-    if (num < 0) {
-        return -1;
-    }
-
-    return 1;
 }
 
 // 現在クリックが可能な状態か。 Is it currently clickable?
@@ -214,197 +204,153 @@ bool process_record_user(uint16_t keycode, keyrecord_t *record) {
                     return false;
                 }
                 
-                for (int i = 0; i < sizeof(ignore_disable_mouse_layer_keys) / sizeof(ignore_disable_mouse_layer_keys[0]); i++)
-                {
-                    if (keycode == ignore_disable_mouse_layer_keys[i])
-                    {
+                for (int i = 0; i < sizeof(ignore_disable_mouse_layer_keys) / sizeof(ignore_disable_mouse_layer_keys[0]); i++) {
+                    if (keycode == ignore_disable_mouse_layer_keys[i]) {
                         return true;
                     }
                 }
-
+                
                 disable_click_layer();
             }
-        
+            break;
     }
-   
     return true;
 }
 
-
-report_mouse_t pointing_device_task_user(report_mouse_t mouse_report) {
-    int16_t current_x = mouse_report.x;
-    int16_t current_y = mouse_report.y;
-    int16_t current_h = 0;
-    int16_t current_v = 0;
-
-    if (current_x != 0 || current_y != 0) {
-        
-        switch (state) {
-            case CLICKABLE:
-                click_timer = timer_read();
-                break;
-
-            case CLICKING:
-                after_click_lock_movement -= my_abs(current_x) + my_abs(current_y);
-
-                if (after_click_lock_movement > 0) {
-                    current_x = 0;
-                    current_y = 0;
-                }
-
-                break;
-
-            case SCROLLING:
-            {
-                int8_t rep_v = 0;
-                int8_t rep_h = 0;
-
-                // 垂直スクロールの方の感度を高める。 Increase sensitivity toward vertical scrolling.
-                if (my_abs(current_y) * 2 > my_abs(current_x)) {
-
-                    scroll_v_mouse_interval_counter += current_y;
-                    while (my_abs(scroll_v_mouse_interval_counter) > scroll_v_threshold) {
-                        if (scroll_v_mouse_interval_counter < 0) {
-                            scroll_v_mouse_interval_counter += scroll_v_threshold;
-                            rep_v += scroll_v_threshold;
-                        } else {
-                            scroll_v_mouse_interval_counter -= scroll_v_threshold;
-                            rep_v -= scroll_v_threshold;
-                        }
-                        
-                    }
-                } else {
-
-                    scroll_h_mouse_interval_counter += current_x;
-
-                    while (my_abs(scroll_h_mouse_interval_counter) > scroll_h_threshold) {
-                        if (scroll_h_mouse_interval_counter < 0) {
-                            scroll_h_mouse_interval_counter += scroll_h_threshold;
-                            rep_h += scroll_h_threshold;
-                        } else {
-                            scroll_h_mouse_interval_counter -= scroll_h_threshold;
-                            rep_h -= scroll_h_threshold;
-                        }
-                    }
-                }
-
-                current_h = rep_h / scroll_h_threshold * (user_config.mouse_scroll_h_reverse ? -1 : 1);
-                current_v = -rep_v / scroll_v_threshold * (user_config.mouse_scroll_v_reverse ? -1 : 1);
-                current_x = 0;
-                current_y = 0;
-            }
-                break;
-
-            case WAITING:
-                /*
-                if (timer_elapsed(click_timer) > user_config.to_clickable_time) {
-                    enable_click_layer();
-                }
-                */
-
-                mouse_movement += my_abs(current_x) + my_abs(current_y);
-
-                if (mouse_movement >= user_config.to_clickable_movement)
-                {
-                    mouse_movement = 0;
-                    enable_click_layer();
-                }
-                break;
-
-            default:
-                click_timer = timer_read();
-                state = WAITING;
-                mouse_movement = 0;
+// クリックレイヤーをリセットするかどうかの判定。 Determining whether to reset the click layer
+void determine_click_layer_reset(void) {
+    if (state == CLICKABLE) {
+        if (timer_elapsed(click_timer) >= to_reset_time) {
+            disable_click_layer();
         }
-    }
-    else
-    {
-        switch (state) {
-            case CLICKING:
-            case SCROLLING:
-
-                break;
-
-            case CLICKABLE:
-                if (timer_elapsed(click_timer) > to_reset_time) {
-                    disable_click_layer();
-                }
-                break;
-
-             case WAITING:
-                if (timer_elapsed(click_timer) > 50) {
-                    mouse_movement = 0;
-                    state = NONE;
-                }
-                break;
-
-            default:
-                mouse_movement = 0;
-                state = NONE;
-        }
-    }
-
-    mouse_report.x = current_x;
-    mouse_report.y = current_y;
-    mouse_report.h = current_h;
-    mouse_report.v = current_v;
-
-    return mouse_report;
-}
-
-/////////////////////////////
-/// miniZoneの実装 ここまで ///
-////////////////////////////
-
-#ifdef OLED_ENABLE
-#include "lib/oledkit/oledkit.h"
-
-void oledkit_render_logo_user(void) {
-    // Require `OLED_FONT_H "keyboards/keyball/lib/logofont/logofont.c"`
-    char ch = 0x80;
-    // マウスレイヤーの場合、文字色の白黒を反転させる
-    bool isClicklayer = (get_highest_layer(layer_state) == click_layer);
-
-    for (int y = 0; y < 3; y++) {
-        oled_write_P(PSTR(" "), isClicklayer);
-        for (int x = 0; x < 16; x++) {
-            oled_write_char(ch++, isClicklayer);
-        }
-        oled_write_P(PSTR(" "), isClicklayer);
-        oled_advance_page(isClicklayer);
     }
 }
 
-void oledkit_render_info_user(void)
-{
-    keyball_oled_render_keyinfo();
-    keyball_oled_render_ballinfo();
-    // keyball_oled_render_layerinfo();
+bool should_enable_click_layer(void) {
+    return my_abs(mouse_movement) >= user_config.to_clickable_movement;  // return timer_elapsed(click_timer) >= user_config.to_clickable_time;
+}
 
-    // マウスレイヤーの場合、文字色の白黒を反転させる
-    bool isClicklayer = (get_highest_layer(layer_state) == click_layer);
-    oled_write_P(PSTR("L\xB6\xB7r\xB1 "), isClicklayer);
-    // oled_write(get_u8_str(get_highest_layer(layer_state), ' '), isClicklayer);
-    // oled_write_P(PSTR("            "), isClicklayer);
+void update_click_layer_state(int16_t x, int16_t y) {
+    mouse_movement += my_abs(x) + my_abs(y);
 
-    int layer = get_highest_layer(layer_state);
-    for (int i = 0; i < DYNAMIC_KEYMAP_LAYER_COUNT; i++) {
-        if (i == click_layer && isClicklayer) {
-            oled_write(get_u8_str(i, ' '), true);
+    if (state == WAITING && should_enable_click_layer()) {
+        enable_click_layer();
+    }
+}
+
+void update_scroll_intervals(int16_t x, int16_t y) {
+    scroll_v_mouse_interval_counter += y;
+    scroll_h_mouse_interval_counter += x;
+
+    if (my_abs(scroll_v_mouse_interval_counter) >= scroll_v_threshold) {
+        uint8_t scroll = scroll_v_mouse_interval_counter / scroll_v_threshold;
+        report_mouse_t currentReport = pointing_device_get_report();
+
+        if (user_config.mouse_scroll_v_reverse) {
+            currentReport.v = -scroll;
         } else {
-            if (i == layer) {
-                oled_write(get_u8_str(i, ' '), !isClicklayer);
-            } else {
-                oled_write(get_u8_str(i, ' '), isClicklayer);
-            }
+            currentReport.v = scroll;
         }
+
+        pointing_device_set_report(currentReport);
+        pointing_device_send();
+
+        scroll_v_mouse_interval_counter = 0;
+    }
+
+    if (my_abs(scroll_h_mouse_interval_counter) >= scroll_h_threshold) {
+        uint8_t scroll = scroll_h_mouse_interval_counter / scroll_h_threshold;
+        report_mouse_t currentReport = pointing_device_get_report();
+
+        if (user_config.mouse_scroll_h_reverse) {
+            currentReport.h = -scroll;
+        } else {
+            currentReport.h = scroll;
+        }
+
+        pointing_device_set_report(currentReport);
+        pointing_device_send();
+
+        scroll_h_mouse_interval_counter = 0;
     }
 }
 
-oled_rotation_t oled_init_user(oled_rotation_t rotation) {
-    return is_keyboard_left() ? OLED_ROTATION_180 : rotation;
+void pointing_device_task(void) {
+    report_mouse_t report = pointing_device_get_report();
+    int16_t x = report.x;
+    int16_t y = report.y;
+
+    if (is_clickable_mode()) {
+        determine_click_layer_reset();
+    } else {
+        update_click_layer_state(x, y);
+    }
+
+    if (state == SCROLLING) {
+        update_scroll_intervals(x, y);
+
+        report.x = 0;
+        report.y = 0;
+    }
+
+    pointing_device_set_report(report);
+    pointing_device_send();
+}
+
+///////////////
+/// OLEDの設定 ///
+///////////////
+#ifdef OLED_ENABLE
+static void render_layer_status(void) {
+    oled_write_P(PSTR("Layer: "), false);
+
+    switch (get_highest_layer(layer_state)) {
+        case 0:
+            oled_write_ln_P(PSTR("Default"), false);
+            break;
+        case 1:
+            oled_write_ln_P(PSTR("Raise"), false);
+            break;
+        case 2:
+            oled_write_ln_P(PSTR("Lower"), false);
+            break;
+        case 3:
+            oled_write_ln_P(PSTR("Adjust"), false);
+            break;
+        case 4:
+            oled_write_ln_P(PSTR("Nav"), false);
+            break;
+        case 5:
+            oled_write_ln_P(PSTR("Mouse"), false);
+            break;
+        case 6:
+            oled_write_ln_P(PSTR("Click"), false);
+            break;
+        default:
+            oled_write_ln_P(PSTR("Unknown"), false);
+    }
+}
+
+static void render_mod_status(uint8_t modifiers) {
+    oled_write_P(PSTR("Mods: "), false);
+    oled_write_P(PSTR(" "), false);
+
+    oled_write_P(modifiers & MOD_MASK_SHIFT ? PSTR("S") : PSTR("-"), false);
+    oled_write_P(modifiers & MOD_MASK_CTRL ? PSTR("C") : PSTR("-"), false);
+    oled_write_P(modifiers & MOD_MASK_ALT ? PSTR("A") : PSTR("-"), false);
+    oled_write_P(modifiers & MOD_MASK_GUI ? PSTR("G") : PSTR("-"), false);
+}
+
+bool oled_task_user(void) {
+    oled_clear();
+
+    render_layer_status();
+    render_mod_status(get_mods());
+
+    return false;
 }
 #endif
+
 
 
 const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
