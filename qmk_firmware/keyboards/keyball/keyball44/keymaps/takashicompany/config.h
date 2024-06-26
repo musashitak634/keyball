@@ -1,4 +1,4 @@
-/*
+----------/*
 This is the c configuration file for the keymap
 
 Copyright 2022 @Yowkees
@@ -35,5 +35,6 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 #define TAP_CODE_DELAY 5
 #define DYNAMIC_KEYMAP_LAYER_COUNT 7
-#define TAPPING_TERM 140
+#define TAPPING_TERM 200
 #define RETRO_TAPPING
+#define HOLD_ON_OTHER_KEY_PRESS
