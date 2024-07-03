@@ -133,6 +133,7 @@ bool process_record_user(uint16_t keycode, keyrecord_t *record) {
         case KC_MY_BTN1:
         case KC_MY_BTN2:
         case KC_MY_BTN3:
+        case KC_LSFT:
         {
             report_mouse_t currentReport = pointing_device_get_report();
 
