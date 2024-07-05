@@ -139,7 +139,60 @@ void keyboard_pre_init_kb(void) {
     keyboard_pre_init_user();
 }
 #endif
-
+C keyball. 3 X
+lib > keyball › C keyball. › adjust_mouse_speed(keyball_motion_t *)
+//追加
+static void adjust_mouse_speed (keyball_motion_t *m) {
+int16
+_t movement_size = abs (m->x)
++ abs(m->y) ;
+float speed_multiplier = 1.0;// 速度の倍率
+if (movement
+size › 60) K
+speed multiplier = 3.0;
+else if (movement_size ›
+30) {
+speed
+multiplier = 1.5;
+} else if (movement
+_size › 5) {
+speed
+multiplier = 1.0;
+} else if (movement
+size › 4) {
+speed
+multiplier = 0.9;
+} else if (movement_size › 3) €
+speed
+_multiplier = 0.7;
+} else if (movement
+_size › 2) {
+speed
+multiplier = 0.5;
+} else if (movement_size › 1) {
+speed
+multiplier = 0.2;
+m->x = clip2int8((int16_t) (m-›x * speed_
+multiplier));
+m-›y = clip2int8((int16_t)(m->y * speed_multiplier));
+static void motion_to_mouse_move(keyball
+motion_t *m, report_mouse_t
+adjust
+_mouse_speed（m）；// 追加
+*r, bool is_left f
+#if KEYBALL_MODEL == 61 ||
+KEYBALL_MODEL == 39| KEYBALL_MODEL == 147|| KEYBALL_MODEL == 44
+r-›x = clip2int8(m-›y);
+r-›y = clip2int8(m->x);
+if (is_left) {
+r-›x = -r-›x;
+#elif KEYBALL_MODEL == 46
+r-xx = clip2int8（m->x）；
+r-›y = -clip2int8(m-›y);
+#else
+#
+#endif
+error ("unknown Keyball model")
 void pointing_device_driver_init(void) {
 #if KEYBALL_MODEL != 46
     keyball.this_have_ball = pmw3360_init();
